@@ -3,7 +3,7 @@
 import numpy as np, warnings
 from sklearn.linear_model.logistic import _logistic_loss_and_grad
 from sklearn.linear_model import RidgeClassifier
-from contextualbandits.utils import _check_X_input, _check_1d_inp
+from utils import _check_X_input, _check_1d_inp
 
 #### Pre-defined step size sequences
 def _step_size_sqrt_over10(initial_step_size, iteration_num):
@@ -86,7 +86,7 @@ class StochasticLogisticRegression:
 
 		Note
 		----
-		Calling this function will only increase the iteration numbers by 1. 
+		Calling this function will only increase the iteration numbers by 1.
 
 		Note
 		----
@@ -154,7 +154,7 @@ class StochasticLogisticRegression:
 		else:
 			self.grad_sq_sum = self.rmsprop_weight * self.grad_sq_sum + (1 - self.rmsprop_weight) * grad_sq
 		self.w -= step_size * grad / np.sqrt(self.grad_sq_sum + self.rmsprop_reg)
-		
+
 		self.niter += 1
 		self.is_fitted = True
 		return self

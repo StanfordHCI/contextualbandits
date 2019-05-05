@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd, numpy as np, warnings
-from contextualbandits.utils import _check_constructor_input, _check_beta_prior, \
+from utils import _check_constructor_input, _check_beta_prior, \
             _check_smoothing, _check_fit_input, _check_X_input, _check_1d_inp, \
             _BetaPredictor, _ZeroPredictor, _OnePredictor, _OneVsRest,\
             _BootstrappedClassifier_w_predict, _BootstrappedClassifier_w_predict_proba, \
@@ -18,7 +18,7 @@ class _BasePolicy:
 
     def _add_common_params(self, base_algorithm, beta_prior, smoothing, njobs, nchoices,
             batch_train, assume_unique_reward, assign_algo=True, prior_def_ucb = False):
-        
+
         if isinstance(base_algorithm, np.ndarray) or base_algorithm.__class__.__name__ == "Series":
             base_algorithm = list(base_algorithm)
 
@@ -66,7 +66,7 @@ class _BasePolicy:
         Note
         ----
         The available arms, if named, are stored in attribute 'choice_names'.
-        
+
         Parameters
         ----------
         arm_name : int or object
@@ -181,11 +181,11 @@ class _BasePolicy:
                                    self.batch_train,
                                    njobs = self.njobs)
         return self
-    
+
     def partial_fit(self, X, a, r):
         """
         Fits the base algorithm (one per class) to partially labeled data in batches.
-        
+
         Note
         ----
         In order to use this method, the base classifier must have a 'partial_fit' method,
@@ -211,7 +211,7 @@ class _BasePolicy:
             return self
         else:
             return self.fit(X, a, r)
-    
+
     def decision_function(self, X):
         """
         Get the scores for each arm following this policy's action-choosing criteria.
@@ -221,12 +221,12 @@ class _BasePolicy:
         For 'ExploreFirst', the results from this method will not actually follow the policy in
         assigning random numbers during the exploration phase.
         Same for 'AdaptiveGreedy' - it won't make random choices according to the policy.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
             Data for which to obtain decision function scores for each arm.
-        
+
         Returns
         -------
         scores : array (n_samples, n_choices)
@@ -262,7 +262,7 @@ class _BasePolicyWithExploit(_BasePolicy):
     def predict(self, X, exploit = False, output_score = False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -270,7 +270,7 @@ class _BasePolicyWithExploit(_BasePolicy):
         output_score : bool
             Whether to output the score that this method predicted, in case it is desired to use
             it with this pakckage's offpolicy and evaluation modules.
-            
+
         Returns
         -------
         pred : array (n_samples,) or dict("choice" : array(n_samples,), "score" : array(n_samples,))
@@ -295,7 +295,7 @@ class BootstrappedUCB(_BasePolicyWithExploit):
 
     Obtains an upper confidence bound by taking the percentile of the predictions from a
     set of classifiers, all fit with different bootstrapped samples (multiple samples per arm).
-    
+
     Note
     ----
     When fitting the algorithm to data in batches (online), it's not possible to take an
@@ -303,7 +303,7 @@ class BootstrappedUCB(_BasePolicyWithExploit):
     grows to infinity, the number of times that an observation appears in a bootstrapped sample is
     distributed ~ Poisson(1). However, I've found that assigning random weights to observations
     produces a more stable effect, so it also has the option to assign weights randomly ~ Gamma(1,1).
-    
+
     Parameters
     ----------
     base_algorithm : obj or list
@@ -375,10 +375,10 @@ class BootstrappedUCB(_BasePolicyWithExploit):
 class BootstrappedTS(_BasePolicyWithExploit):
     """
     Bootstrapped Thompson Sampling
-    
+
     Performs Thompson Sampling by fitting several models per class on bootstrapped samples,
     then makes predictions by taking one of them at random for each class.
-    
+
     Note
     ----
     When fitting the algorithm to data in batches (online), it's not possible to take an
@@ -386,7 +386,7 @@ class BootstrappedTS(_BasePolicyWithExploit):
     grows to infinity, the number of times that an observation appears in a bootstrapped sample is
     distributed ~ Poisson(1). However, I've found that assigning random weights to observations
     produces a more stable effect, so it also has the option to assign weights randomly ~ Gamma(1,1).
-    
+
     Parameters
     ----------
     base_algorithm : obj
@@ -435,7 +435,7 @@ class BootstrappedTS(_BasePolicyWithExploit):
         Number of parallel jobs to run (for dividing work across samples within one arm). If passing None
         will set it to 1. If passing -1 will set it to the number of CPU cores. The total number of parallel
         jobs will be njobs_arms * njobs_samples.
-    
+
     References
     ----------
     [1] Cortes, David. "Adapting multi-armed bandits policies to contextual bandits scenarios."
@@ -453,10 +453,10 @@ class BootstrappedTS(_BasePolicyWithExploit):
 class SeparateClassifiers(_BasePolicy):
     """
     Separate Clasifiers per arm
-    
+
     Fits one classifier per arm using only the data on which that arm was chosen.
     Predicts as One-Vs-Rest.
-    
+
     Parameters
     ----------
     base_algorithm : obj
@@ -506,17 +506,17 @@ class SeparateClassifiers(_BasePolicy):
                  batch_train=False, assume_unique_reward=False, njobs=-1):
         self._add_common_params(base_algorithm, beta_prior, smoothing, njobs, nchoices,
                                 batch_train, assume_unique_reward)
-    
+
     def decision_function_std(self, X):
         """
         Get the predicted "probabilities" from each arm from the classifier that predicts it,
         standardized to sum up to 1 (note that these are no longer probabilities).
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
             Data for which to obtain decision function scores for each arm.
-        
+
         Returns
         -------
         scores : array (n_samples, n_choices)
@@ -524,20 +524,20 @@ class SeparateClassifiers(_BasePolicy):
         """
         X = _check_X_input(X)
         return self._oracles.predict_proba(X)
-    
+
     def predict_proba_separate(self,X):
         """
         Get the predicted probabilities from each arm from the classifier that predicts it.
-        
+
         Note
         ----
         Classifiers are all fit on different data, so the probabilities will not add up to 1.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
             Data for which to obtain decision function scores for each arm.
-        
+
         Returns
         -------
         scores : array (n_samples, n_choices)
@@ -545,11 +545,11 @@ class SeparateClassifiers(_BasePolicy):
         """
         X = _check_X_input(X)
         return self._oracles.predict_proba_raw(X)
-    
+
     def predict(self, X, output_score = False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -557,7 +557,7 @@ class SeparateClassifiers(_BasePolicy):
         output_score : bool
             Whether to output the score that this method predicted, in case it is desired to use
             it with this pakckage's offpolicy and evaluation modules.
-            
+
         Returns
         -------
         pred : array (n_samples,) or dict("choice" : array(n_samples,), "score" : array(n_samples,))
@@ -576,10 +576,10 @@ class SeparateClassifiers(_BasePolicy):
 class EpsilonGreedy(_BasePolicy):
     """
     Epsilon Greedy
-    
+
     Takes a random action with probability p, or the action with highest
     estimated reward with probability 1-p.
-    
+
     Parameters
     ----------
     base_algorithm : obj
@@ -624,7 +624,7 @@ class EpsilonGreedy(_BasePolicy):
         set it to the number of CPU cores. Note that if the base algorithm is itself parallelized,
         this might result in a slowdown as both compete for available threads, so don't set
         parallelization in both.
-    
+
     References
     ----------
     [1] Cortes, David. "Adapting multi-armed bandits policies to contextual bandits scenarios."
@@ -643,11 +643,11 @@ class EpsilonGreedy(_BasePolicy):
                 warnings.warn("Warning: 'EpsilonGreedy' has a very high decay rate.")
         self.explore_prob = explore_prob
         self.decay = decay
-    
+
     def predict(self, X, exploit = False, output_score = False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -658,7 +658,7 @@ class EpsilonGreedy(_BasePolicy):
         output_score : bool
             Whether to output the score that this method predicted, in case it is desired to use
             it with this pakckage's offpolicy and evaluation modules.
-            
+
         Returns
         -------
         pred : array (n_samples,) or dict("choice" : array(n_samples,), "score" : array(n_samples,))
@@ -674,7 +674,7 @@ class EpsilonGreedy(_BasePolicy):
 
         if self.decay is not None:
             self.explore_prob *= self.decay ** X.shape[0]
-        
+
         if not output_score:
             return pred
         else:
@@ -707,7 +707,7 @@ class _ActivePolicy(_BasePolicy):
 class AdaptiveGreedy(_ActivePolicy):
     """
     Adaptive Greedy
-    
+
     Takes the action with highest estimated reward, unless that estimation falls below a certain
     threshold, in which case it takes a an action either at random or according to an active learning
     heuristic (same way as `ActiveExplorer`).
@@ -716,18 +716,18 @@ class AdaptiveGreedy(_ActivePolicy):
     ----
     The hyperparameters here can make a large impact on the quality of the choices. Be sure
     to tune the threshold (or percentile), decay, and prior (or smoothing parameters).
-    
+
     Note
     ----
     The threshold for the reward probabilities can be set to a hard-coded number, or
     to be calculated dynamically by keeping track of the predictions it makes, and taking
     a fixed percentile of that distribution to be the threshold.
     In the second case, these are calculated in separate batches rather than in a sliding window.
-    
+
     The original idea was taken from the paper in the references and adapted to the
     contextual bandits setting like this. Can also be set to make choices in the same way as
     'ActiveExplorer' rather than random (see 'greedy_choice' parameter) when using logistic regression.
-    
+
     Parameters
     ----------
     base_algorithm : obj
@@ -806,14 +806,14 @@ class AdaptiveGreedy(_ActivePolicy):
         set it to the number of CPU cores. Note that if the base algorithm is itself parallelized,
         this might result in a slowdown as both compete for available threads, so don't set
         parallelization in both.
-    
+
     References
     ----------
     [1] Chakrabarti, Deepayan, et al. "Mortal multi-armed bandits."
         Advances in neural information processing systems. 2009.
     [2] Cortes, David. "Adapting multi-armed bandits policies to contextual bandits scenarios."
         arXiv preprint arXiv:1811.04383 (2018).
-    
+
     """
     def __init__(self, base_algorithm, nchoices, window_size=500, percentile=35, decay=0.9998,
                  decay_type='percentile', initial_thr='auto', beta_prior='auto', smoothing=None,
@@ -821,7 +821,7 @@ class AdaptiveGreedy(_ActivePolicy):
                  active_choice=None, f_grad_norm='auto', case_one_class='auto', njobs=-1):
         self._add_common_params(base_algorithm, beta_prior, smoothing, njobs, nchoices,
                                 batch_train, assume_unique_reward)
-        
+
         assert isinstance(window_size, int)
         if percentile is not None:
             assert isinstance(percentile, int)
@@ -851,7 +851,7 @@ class AdaptiveGreedy(_ActivePolicy):
         else:
             self._force_fit = False
         self.active_choice = active_choice
-    
+
     def fit(self, X, a, r):
         """
         Fits the base algorithm (one per class) to partially labeled data.
@@ -886,7 +886,7 @@ class AdaptiveGreedy(_ActivePolicy):
     def predict(self, X, exploit = False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -894,7 +894,7 @@ class AdaptiveGreedy(_ActivePolicy):
         exploit : bool
             Whether to make a prediction according to the policy, or to just choose the
             arm with the highest expected reward according to current models.
-            
+
         Returns
         -------
         pred : array (n_samples,)
@@ -902,16 +902,16 @@ class AdaptiveGreedy(_ActivePolicy):
         """
         # TODO: add option to output scores
         return self._name_arms(self._predict(X, exploit))
-    
+
     def _predict(self, X, exploit = False):
         X = _check_X_input(X)
-        
+
         if X.shape[0] == 0:
             return np.array([])
-        
+
         if exploit:
             return self._oracles.predict(X)
-        
+
         # fixed threshold, anything below is always random
         if (self.decay == 1) or (self.decay is None):
             pred, pred_max = self._calc_preds(X)
@@ -919,13 +919,13 @@ class AdaptiveGreedy(_ActivePolicy):
         # variable threshold that needs to be updated
         else:
             remainder_window = self.window_size - self.window_cnt
-            
+
             # case 1: number of predictions to make would still fit within current window
             if remainder_window > X.shape[0]:
                 pred, pred_max = self._calc_preds(X)
                 self.window_cnt += X.shape[0]
                 self.window = np.r_[self.window, pred_max]
-                
+
                 # apply decay for all observations
                 self._apply_decay(X.shape[0])
 
@@ -933,11 +933,11 @@ class AdaptiveGreedy(_ActivePolicy):
             else:
                 # predict for the remainder of this window
                 pred, pred_max = self._calc_preds(X[:remainder_window, :])
-                
+
                 # allocate the rest that don't fit in this window
                 pred_all = np.zeros(X.shape[0])
                 pred_all[:remainder_window] = pred
-                
+
                 # complete window, update percentile if needed
                 self.window = np.r_[self.window, pred_max]
                 if self.decay_type == 'percentile':
@@ -946,14 +946,14 @@ class AdaptiveGreedy(_ActivePolicy):
                 # reset window
                 self.window = np.array([])
                 self.window_cnt = 0
-                
+
                 # decay threshold only for these observations
                 self._apply_decay(remainder_window)
-                
+
                 # predict the rest recursively
                 pred_all[remainder_window:] = self.predict(X[remainder_window:, :])
                 return pred_all
-                
+
         return pred
 
     def _apply_decay(self, nobs):
@@ -988,10 +988,10 @@ class AdaptiveGreedy(_ActivePolicy):
 class ExploreFirst(_BasePolicy):
     """
     Explore First, a.k.a. Explore-Then-Exploit
-    
+
     Selects random actions for the first N predictions, after which it selects the
     best arm only according to its estimates.
-    
+
     Parameters
     ----------
     base_algorithm : obj
@@ -1044,7 +1044,7 @@ class ExploreFirst(_BasePolicy):
                  beta_prior=None, smoothing=None, batch_train=False, assume_unique_reward=False, njobs=-1):
         self._add_common_params(base_algorithm, beta_prior, smoothing, njobs, nchoices,
                                 batch_train, assume_unique_reward)
-        
+
         assert explore_rounds>0
         assert isinstance(explore_rounds, int)
         self.explore_rounds = explore_rounds
@@ -1053,7 +1053,7 @@ class ExploreFirst(_BasePolicy):
     def predict(self, X, exploit = False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -1061,7 +1061,7 @@ class ExploreFirst(_BasePolicy):
         exploit : bool
             Whether to make a prediction according to the policy, or to just choose the
             arm with the highest expected reward according to current models.
-            
+
         Returns
         -------
         pred : array (n_samples,)
@@ -1069,23 +1069,23 @@ class ExploreFirst(_BasePolicy):
         """
         # TODO: add option to output scores
         return self._name_arms(self._predict(X, exploit))
-    
+
     def _predict(self, X, exploit = False):
         X = _check_X_input(X)
-        
+
         if X.shape[0] == 0:
             return np.array([])
-        
+
         if exploit:
             return self._oracles.predict(X)
-        
+
         if self.explore_cnt < self.explore_rounds:
             self.explore_cnt += X.shape[0]
-            
+
             # case 1: all predictions are within allowance
             if self.explore_cnt <= self.explore_rounds:
                 return np.random.randint(self.nchoices, size = X.shape[0])
-            
+
             # case 2: some predictions are within allowance, others are not
             else:
                 n_explore = self.explore_rounds - self.explore_cnt + X.shape[0]
@@ -1099,10 +1099,10 @@ class ExploreFirst(_BasePolicy):
 class ActiveExplorer(_ActivePolicy):
     """
     Active Explorer
-    
+
     Selects a proportion of actions according to an active learning heuristic based on gradient.
     Works only for differentiable and preferably smooth functions.
-    
+
     Note
     ----
     Here, for the predictions that are made according to an active learning heuristic
@@ -1112,7 +1112,7 @@ class ActiveExplorer(_ActivePolicy):
     predicts a class, given the current coefficients for that model. This of course requires
     being able to calculate gradients - package comes with pre-defined gradient functions for
     logistic regression, and allows passing custom functions for others.
-    
+
     Parameters
     ----------
     base_algorithm : obj
@@ -1190,12 +1190,12 @@ class ActiveExplorer(_ActivePolicy):
         if self.batch_train:
             base_algorithm = _add_method_predict_robust(base_algorithm)
         self.base_algorithm = base_algorithm
-        
+
         assert isinstance(explore_prob, float)
         assert (explore_prob > 0) and (explore_prob < 1)
         self.explore_prob = explore_prob
         self.decay = decay
-    
+
     def fit(self, X, a, r):
         """
         Fits logistic regression (one per class) to partially labeled data,
@@ -1226,11 +1226,11 @@ class ActiveExplorer(_ActivePolicy):
                                    force_counters = True,
                                    njobs = self.njobs)
         return self
-    
+
     def predict(self, X, exploit=False, gradient_calc='weighted'):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -1243,29 +1243,29 @@ class ActiveExplorer(_ActivePolicy):
             function for each classifier, given that it could be either class (positive or negative)
             for the classifier that predicts each arm. If weighted, they are weighted by the same
             probability estimates from the base algorithm.
-            
+
         Returns
         -------
         pred : array (n_samples,)
             Actions chosen by the policy.
         """
         X = _check_X_input(X)
-        
+
         pred = self._oracles.decision_function(X)
         if not exploit:
             change_greedy = np.random.random(size=X.shape[0]) <= self.explore_prob
             if change_greedy.sum() > 0:
                 pred[change_greedy, :] = self._crit_active(X[change_greedy, :], pred[change_greedy, :], gradient_calc)
-            
+
             if self.decay is not None:
                 self.explore_prob *= self.decay ** X.shape[0]
-        
+
         return self._name_arms(np.argmax(pred, axis = 1))
 
 class SoftmaxExplorer(_BasePolicy):
     """
     SoftMax Explorer
-    
+
     Selects an action according to probabilites determined by a softmax transformation
     on the scores from the decision function that predicts each class.
 
@@ -1273,8 +1273,8 @@ class SoftmaxExplorer(_BasePolicy):
     ----
     Will apply an inverse sigmoid transformations to the probabilities that come from the base algorithm
     before applying the softmax function.
-    
-    
+
+
     Parameters
     ----------
     base_algorithm : obj
@@ -1344,16 +1344,16 @@ class SoftmaxExplorer(_BasePolicy):
             assert inflation_rate > 0
         self.multiplier = multiplier
         self.inflation_rate = inflation_rate
-    
+
     def decision_function(self, X, output_score=False, apply_sigmoid_score=True):
         """
         Get the scores for each arm following this policy's action-choosing criteria.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
             Data for which to obtain decision function scores for each arm.
-        
+
         Returns
         -------
         scores : array (n_samples, n_choices)
@@ -1361,11 +1361,11 @@ class SoftmaxExplorer(_BasePolicy):
         """
         X = _check_X_input(X)
         return self._oracles.predict_proba(X)
-    
+
     def predict(self, X, exploit=False, output_score=False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -1376,7 +1376,7 @@ class SoftmaxExplorer(_BasePolicy):
         output_score : bool
             Whether to output the score that this method predicted, in case it is desired to use
             it with this pakckage's offpolicy and evaluation modules.
-            
+
         Returns
         -------
         pred : array (n_samples,) or dict("choice" : array(n_samples,), "score" : array(n_samples,))
@@ -1413,14 +1413,14 @@ class SoftmaxExplorer(_BasePolicy):
 class LinUCB:
     """
     LinUCB
-    
+
     Note
     ----
     The formula here is implemented in a loop per observation for both fitting and predicting.
     The A matrix in the formulas are not inverted after each update, but rather, only their inverse is stored
     and is updated after each observation using the Sherman-Morrison formula.
     Thus, updating is quite fast, but there is no speed-up in doing batch updates.
-    
+
     Parameters
     ----------
     nchoices : int or list-like
@@ -1434,7 +1434,7 @@ class LinUCB:
         set it to the number of CPU cores. Be aware that the algorithm will use BLAS function calls,
         and if these have multi-threading enabled, it might result in a slow-down
         as both functions compete for available threads.
-    
+
     References
     ----------
     [1] Chu, Wei, et al. "Contextual bandits with linear payoff functions."
@@ -1470,7 +1470,7 @@ class LinUCB:
         Note
         ----
         The available arms, if named, are stored in attribute 'choice_names'.
-        
+
         Parameters
         ----------
         arm_name : int or object
@@ -1507,7 +1507,7 @@ class LinUCB:
         self._oracles.append(_LinUCBnTSSingle(self.alpha, self._ts))
         _BasePolicy._append_arm(self, arm_name)
         return self
-    
+
     def fit(self, X, a, r):
         """"
         Fits one linear model for the first time to partially labeled data.
@@ -1536,7 +1536,7 @@ class LinUCB:
     def _fit_single(self, choice, X, a, r):
         this_action = a == choice
         self._oracles[choice].fit(X[this_action, :], r[this_action].astype('float64'))
-                
+
     def partial_fit(self, X, a, r):
         """"
         Updates each linear model with a new batch of data with actions chosen by this same policy.
@@ -1559,13 +1559,13 @@ class LinUCB:
         for n in range(self.nchoices):
             this_action = a == n
             self._oracles[n].partial_fit(X[this_action, :], r[this_action].astype('float64'))
-            
+
         return self
-    
+
     def predict(self, X, exploit=False, output_score=False):
         """
         Selects actions according to this policy for new data.
-        
+
         Parameters
         ----------
         X : array (n_samples, n_features)
@@ -1576,7 +1576,7 @@ class LinUCB:
         output_score : bool
             Whether to output the score that this method predicted, in case it is desired to use
             it with this pakckage's offpolicy and evaluation modules.
-            
+
         Returns
         -------
         pred : array (n_samples,) or dict("choice" : array(n_samples,), "score" : array(n_samples,))
@@ -1604,14 +1604,14 @@ class LinUCB:
 class LinTS(LinUCB):
     """
     Linear Thompson Sampling
-    
+
     Note
     ----
     The formula here is implemented in a loop per observation for both fitting and predicting.
     The B matrix in the formulas are not inverted after each update, but rather, only their inverse is stored
     and is updated after each observation using the Sherman-Morrison formula.
     Thus, updating is quite fast, but there is no speed-up in doing batch updates.
-    
+
     Parameters
     ----------
     nchoices : int or list-like
@@ -1625,7 +1625,7 @@ class LinTS(LinUCB):
         set it to the number of CPU cores. Be aware that the algorithm will use BLAS function calls,
         and if these have multi-threading enabled, it might result in a slow-down
         as both functions compete for available threads.
-    
+
     References
     ----------
     [1] Agrawal, Shipra, and Navin Goyal. "Thompson sampling for contextual bandits with linear payoffs."
@@ -1638,15 +1638,15 @@ class LinTS(LinUCB):
 class BayesianUCB(_BasePolicyWithExploit):
     """
     Bayesian Upper Confidence Bound
-    
+
     Gets an upper confidence bound by Bayesian Logistic Regression estimates.
-    
+
     Note
     ----
     The implementation here uses PyMC3's GLM formula with default parameters and ADVI.
     This is a very, very slow implementation, and will probably take at least two
     orders or magnitude more to fit compared to other methods.
-    
+
     Parameters
     ----------
     nchoices : int or list-like
@@ -1692,7 +1692,7 @@ class BayesianUCB(_BasePolicyWithExploit):
 
         ## NOTE: this is a really slow and poorly thought implementation
         ## TODO: rewrite using some faster framework such as Edward,
-        ##       or with a hard-coded coordinate ascent procedure instead. 
+        ##       or with a hard-coded coordinate ascent procedure instead.
         self._add_common_params(_ZeroPredictor(), beta_prior, smoothing, njobs, nchoices,
                                 False, assume_unique_reward, assign_algo = False, prior_def_ucb = True)
         assert (percentile >= 0) and (percentile <= 100)
@@ -1708,7 +1708,7 @@ class BayesianUCB(_BasePolicyWithExploit):
 class BayesianTS(_BasePolicyWithExploit):
     """
     Bayesian Thompson Sampling
-    
+
     Performs Thompson Sampling by sampling a set of Logistic Regression coefficients
     from each class, then predicting the class with highest estimate.
 
@@ -1717,7 +1717,7 @@ class BayesianTS(_BasePolicyWithExploit):
     The implementation here uses PyMC3's GLM formula with default parameters and ADVI.
     This is a very, very slow implementation, and will probably take at least two
     orders or magnitude more to fit compared to other methods.
-    
+
     Parameters
     ----------
     nchoices : int or list-like
@@ -1759,7 +1759,7 @@ class BayesianTS(_BasePolicyWithExploit):
 
         ## NOTE: this is a really slow and poorly thought implementation
         ## TODO: rewrite using some faster framework such as Edward,
-        ##       or with a hard-coded coordinate ascent procedure instead. 
+        ##       or with a hard-coded coordinate ascent procedure instead.
         self._add_common_params(_ZeroPredictor(), beta_prior, smoothing, njobs, nchoices,
                                 False, assume_unique_reward, assign_algo=False)
         self.nchoices = nchoices

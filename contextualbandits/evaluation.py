@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import pandas as pd, numpy as np
-from contextualbandits.utils import _check_fit_input, _check_1d_inp, _check_X_input
-from contextualbandits.online import SeparateClassifiers
+from utils import _check_fit_input, _check_1d_inp, _check_X_input
+from online import SeparateClassifiers
 
 def evaluateRejectionSampling(policy, X, a, r, online=False, start_point_online='random', batch_size=10):
     """
     Evaluate a policy using rejection sampling on test data.
-    
+
     Note
     ----
     In order for this method to be unbiased, the actions on the test sample must have been
     collected at random and not according to some other policy.
-    
+
     Parameters
     ----------
     policy : obj
@@ -33,12 +33,12 @@ def evaluateRejectionSampling(policy, X, a, r, online=False, start_point_online=
     batch_size : int
         After how many rounds to refit the policy being evaluated.
         Only used when passing online=True.
-        
+
     Returns
     -------
     result : tuple (float, int)
         Estimated mean reward and number of observations taken.
-        
+
     References
     ----------
     [1] Li, Lihong, et al. "A contextual-bandit approach to personalized news article recommendation."
@@ -54,7 +54,7 @@ def evaluateRejectionSampling(policy, X, a, r, online=False, start_point_online=
             pass
         else:
             raise ValueError("'start_point_online' must be one of 'random', float [0,1] or int [0, sample_size]")
-    
+
     if not online:
         pred=policy.predict(X)
         match=pred==a
@@ -87,41 +87,41 @@ def evaluateRejectionSampling(policy, X, a, r, online=False, start_point_online=
         if cum_n==0:
             raise ValueError("Rejection sampling couldn't obtain any matching samples.")
         return (cum_r/cum_n, cum_n)
-    
+
 
 def evaluateDoublyRobust(pred, X, a, r, p, reward_estimator, nchoices=None,
                          handle_invalid=True, c=None, pmin=1e-5):
     """
     Doubly-Robust Policy Evaluation
-    
+
     Evaluates rewards of arm choices of a policy from data collected by another policy.
-    
+
     Note
     ----
     This method requires to form reward estimates of the arms that were chosen and of the arms
     that the policy to be evaluated would choose. In order to do so, you can either provide
     estimates as an array (see Parameters), or pass a model.
-    
+
     One method to obtain reward estimates is to fit a model to both the training and test data
     and use its predictions as reward estimates. You can do so by passing an object of class
     `contextualbandits.online.SeparateClassifiers` which should be already fitted.
-    
+
     Another method is to fit a model to the test data, in which case you can pass a classifier
     with a 'predict_proba' method here, which will be fit to the same test data passed to this
     function to obtain reward estimates.
-    
+
     The last two options can suffer from invalid predictions if there are some arms for which every time
     they were chosen they resulted in a reward, or never resulted in a reward. In such cases,
     this function includes the option to impute the "predictions" for them (which would otherwise
     always be exactly zero or one regardless of the context) by replacing them with random
     numbers ~Beta(3,1) or ~Beta(1,3) for the cases of always good and always bad.
-    
+
     This is just a wild idea though, and doesn't guarantee reasonable results in such siutation.
-    
+
     Note that, if you are using the 'SeparateClassifiers' class from the online module in this
     same package, it comes with a method 'predict_proba_separate' that can be used to get reward
     estimates. It still can suffer from the same problem of always-one and always-zero predictions though.
-    
+
     Parameters
     ----------
     pred : array (n_samples,)
@@ -155,7 +155,7 @@ def evaluateDoublyRobust(pred, X, a, r, p, reward_estimator, nchoices=None,
     pmin : None or float
         Scores (from the exploration policy) will be converted to the minimum between
         pmin and the original estimate.
-    
+
     References
     ----------
     [1] Dudík, Miroslav, John Langford, and Lihong Li. "Doubly robust policy evaluation and learning."
@@ -170,7 +170,7 @@ def evaluateDoublyRobust(pred, X, a, r, p, reward_estimator, nchoices=None,
         assert isinstance(c, float)
     if pmin is not None:
         assert isinstance(pmin, float)
-    
+
     if type(reward_estimator)==np.ndarray:
         assert reward_estimator.shape[1]==2
         assert reward_estimator.shape[0]==X.shape[0]
@@ -190,28 +190,28 @@ def evaluateDoublyRobust(pred, X, a, r, p, reward_estimator, nchoices=None,
         error_msg = "'reward_estimator' must be either an array, a classifier with"
         error_msg += "'predict_proba', or a 'SeparateClassifiers' object."
         raise ValueError(error_msg)
-    
+
     if handle_invalid:
         rhat_new[rhat_new==1]=np.random.beta(3,1,size=rhat_new.shape)[rhat_new==1]
         rhat_new[rhat_new==0]=np.random.beta(1,3,size=rhat_new.shape)[rhat_new==0]
         rhat_old[rhat_old==1]=np.random.beta(3,1,size=rhat_old.shape)[rhat_old==1]
         rhat_old[rhat_old==0]=np.random.beta(1,3,size=rhat_old.shape)[rhat_old==0]
-    
+
     if c is not None:
         p = c*p
     if pmin is not None:
         p = np.clip(p, a_min=pmin, a_max=None)
-    
+
     actions_matching = pred==a
     out = rhat_new
     out[actions_matching] += (r[actions_matching]-rhat_old[actions_matching])/p[actions_matching].reshape(-1)
-    
+
     return np.mean(out)
 
 def evaluateFullyLabeled(policy, X, y_onehot, online=False, shuffle=True, update_freq=50, seed=None):
     """
     Evaluates a policy on fully-labeled data
-    
+
     Parameters
     ----------
     X : array (n_samples, n_features)
@@ -228,7 +228,7 @@ def evaluateFullyLabeled(policy, X, y_onehot, online=False, shuffle=True, update
         Batch size - how many observations to predict before refitting the model.
     seed : None or int
         Random seed to use when shuffling and when selecting actions at random for first batch.
-    
+
     Returns
     -------
     mean_rew : array (n_samples,)
@@ -238,7 +238,7 @@ def evaluateFullyLabeled(policy, X, y_onehot, online=False, shuffle=True, update
         X=X.as_matrix()
     if type(y_onehot).__name__=='DataFrame':
         y_onehot=y_onehot.as_matrix()
-    
+
     assert type(X).__name__=='ndarray'
     assert type(y_onehot).__name__=='ndarray'
     assert isinstance(online, bool)
@@ -247,7 +247,7 @@ def evaluateFullyLabeled(policy, X, y_onehot, online=False, shuffle=True, update
     assert X.shape[0]>update_freq
     assert X.shape[0]==y_onehot.shape[0]
     assert X.shape[0]>0
-    
+
     if shuffle:
         new_order=np.arange(X.shape[0])
         if seed is not None:
@@ -255,46 +255,46 @@ def evaluateFullyLabeled(policy, X, y_onehot, online=False, shuffle=True, update
         np.random.shuffle(new_order)
         X=X[new_order,:]
         y_onehot=y_onehot[new_order,:]
-        
+
     rewards_per_turn = list()
     history_actions = np.array([])
     n_choices = y_onehot.shape[1]
-    
+
     ## initial seed
     batch_features = X[:update_freq,:]
     if seed is not None:
         np.random.seed(seed)
     batch_actions = np.random.randint(y_onehot.shape[1], size=update_freq)
     batch_rewards = y_onehot[np.arange(update_freq), batch_actions]
-    
+
     if online:
         policy.partial_fit(batch_features, batch_actions, batch_rewards)
     else:
         policy.fit(batch_features, batch_actions, batch_rewards)
-        
+
     ## running the loop
     for i in range(int(np.floor(features.shape[0]/batch_size))):
         st=(i+1)*batch_size
         end=(i+2)*batch_size
         end=np.min([end, X.shape[0]])
-        
+
         batch_features = X[st:end,:]
         batch_actions = policy.predict(batch_features)
         batch_rewards = y_onehot[np.arange(st, end), batch_actions]
-        
+
         rewards_per_turn.append(rewards_per_turn.sum())
-        
+
         if online:
             policy.partial_fit(batch_features, batch_actions, batch_rewards)
         else:
             history_actions = np.append(history_actions, batch_actions)
             policy.fit(X[:end,:], history_actions, y_onehot[np.arange(end), history_actions])
-            
+
     ## outputting results
     def get_mean_reward(reward_lst, batch_size):
         mean_rew=list()
         for r in range(len(reward_lst)):
             mean_rew.append(sum(reward_lst[:r+1])/((r+1)*batch_size))
         return mean_rew
-    
+
     return np.array(get_mean_reward(rewards_per_turn, update_freq))
